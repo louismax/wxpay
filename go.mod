@@ -1,4 +1,4 @@
-module wxpay
+module github.com/louismax/wxpay
 
 go 1.14
 

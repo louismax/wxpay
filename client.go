@@ -25,12 +25,46 @@ type Client struct {
 }
 
 func NewClient(account *Account) *Client {
-	return &Client{
+	res := &Client{
 		account:              account,
 		signType:             MD5,
 		httpConnectTimeoutMs: 2000,
 		httpReadTimeoutMs:    1000,
 	}
+
+	if account.isSandbox{
+		params := make(Params)
+		params.SetString("mch_id",account.mchID)
+		params.SetString("nonce_str",GetGUID())
+
+		params["sign"] = res.Sign(params)
+
+		h := &http.Client{}
+		//fmt.Println("请求参数组装：", params)
+		response, err := h.Post(GetsignkeyUrl, bodyType, strings.NewReader(MapToXml(params)))
+		if err != nil {
+			//fmt.Println("沙箱秘钥获取失败")
+			return res
+		}
+		defer response.Body.Close()
+		keyres, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return res
+		}
+
+		sdkeymap,err := res.processResponseXml(string(keyres))
+		if err != nil{
+			return res
+		}
+		//fmt.Println("沙箱秘钥Key:",sdkeymap)
+		if sdkeymap.GetString("return_code") == "SUCCESS"{
+			res.account.apiKey = sdkeymap.GetString("sandbox_signkey")
+		}
+		//return string(res), nil
+
+		//xmlStr, err := res.postWithoutCert(GetsignkeyUrl, params)
+	}
+	return res
 }
 
 func (c *Client) SetHttpConnectTimeoutMs(ms int) {

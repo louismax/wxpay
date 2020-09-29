@@ -43,6 +43,8 @@ const (
 	SandboxReverseUrl          = "https://api.mch.weixin.qq.com/sandboxnew/secapi/pay/reverse"
 	SandboxAuthCodeToOpenidUrl = "https://api.mch.weixin.qq.com/sandboxnew/tools/authcodetoopenid"
 	SandboxShortUrl            = "https://api.mch.weixin.qq.com/sandboxnew/tools/shorturl"
+
+	GetsignkeyUrl ="https://api.mch.weixin.qq.com/sandboxnew/pay/getsignkey"
 )
 
 func getMd5String(s string) string {

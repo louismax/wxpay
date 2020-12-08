@@ -163,7 +163,7 @@ func (c *Client) postWithoutCert(url string, params Params) (string, error) {
 }
 
 // https 证书请求
-func (c *Client) postWithCert(url string, params Params) (string, error) {
+func (c *Client) postWithCert(url string, params Params,isfill bool) (string, error) {
 	if c.account.certData == nil {
 		return "", errors.New("证书数据为空")
 	}
@@ -179,10 +179,15 @@ func (c *Client) postWithCert(url string, params Params) (string, error) {
 		DisableCompression: true,
 	}
 	h := &http.Client{Transport: transport}
-	p := c.fillRequestData(params)
-	fmt.Println("请求参数组装：", p)
+	ps := Params{}
+	if !isfill{
+		ps = c.fillRequestData(params)
+	}
+	ps = params
 
-	response, err := h.Post(url, bodyType, strings.NewReader(MapToXml(p)))
+	fmt.Println("请求参数组装：", ps)
+
+	response, err := h.Post(url, bodyType, strings.NewReader(MapToXml(ps)))
 	if err != nil {
 		return "", err
 	}
@@ -282,7 +287,7 @@ func (c *Client) Refund(params Params) (Params, error) {
 		url = RefundUrl
 	}
 	//fmt.Println("----- 退款 params:", params)
-	xmlStr, err := c.postWithCert(url, params)
+	xmlStr, err := c.postWithCert(url, params,false)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +371,7 @@ func (c *Client) Reverse(params Params) (Params, error) {
 	} else {
 		url = ReverseUrl
 	}
-	xmlStr, err := c.postWithCert(url, params)
+	xmlStr, err := c.postWithCert(url, params,false)
 	if err != nil {
 		return nil, err
 	}
@@ -397,6 +402,51 @@ func (c *Client) ShortUrl(params Params) (Params, error) {
 		url = ShortUrl
 	}
 	xmlStr, err := c.postWithoutCert(url, params)
+	if err != nil {
+		return nil, err
+	}
+	return c.processResponseXml(xmlStr)
+}
+
+//普通红包
+func (c *Client)Sendredpack(params Params) (Params, error){
+	var url string
+	if c.account.isSandbox {
+		url = ""
+	} else {
+		url = SendredpackUrl
+	}
+	xmlStr, err := c.postWithCert(url, params,true)
+	if err != nil {
+		return nil, err
+	}
+	return c.processResponseXml(xmlStr)
+}
+
+//小程序红包
+func (c *Client)Sendminiprogramhb(params Params) (Params, error)  {
+	var url string
+	if c.account.isSandbox {
+		url = ""
+	} else {
+		url = Sendminiprogramhb
+	}
+	xmlStr, err := c.postWithCert(url, params,true)
+	if err != nil {
+		return nil, err
+	}
+	return c.processResponseXml(xmlStr)
+}
+
+//查询红包
+func (c *Client)Gethbinfo(params Params) (Params, error)   {
+	var url string
+	if c.account.isSandbox {
+		url = ""
+	} else {
+		url = GethbinfoUrl
+	}
+	xmlStr, err := c.postWithCert(url, params,true)
 	if err != nil {
 		return nil, err
 	}

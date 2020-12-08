@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"golang.org/x/crypto/pkcs12"
 	"io"
+	"strings"
+	"time"
+	mathrand "math/rand"
 )
 
 const (
@@ -30,6 +33,9 @@ const (
 	ReverseUrl          = "https://api.mch.weixin.qq.com/secapi/pay/reverse"
 	AuthCodeToOpenidUrl = "https://api.mch.weixin.qq.com/tools/authcodetoopenid"
 	ShortUrl            = "https://api.mch.weixin.qq.com/tools/shorturl"
+	Sendminiprogramhb = "https://api.mch.weixin.qq.com/mmpaymkttransfers/sendminiprogramhb"
+	SendredpackUrl = "https://api.mch.weixin.qq.com/mmpaymkttransfers/sendredpack"
+	GethbinfoUrl = "https://api.mch.weixin.qq.com/mmpaymkttransfers/gethbinfo"
 
 	//微信支付沙箱测试接口
 	SandboxUnifiedOrderUrl     = "https://api.mch.weixin.qq.com/sandboxnew/pay/unifiedorder"
@@ -88,4 +94,17 @@ func pkcs12ToPem(p12 []byte, password string) tls.Certificate {
 		panic(err)
 	}
 	return cert
+}
+
+//GenValidateCode 生成指定长度数字
+func GenValidateCode(width int) string {
+	numeric := [10]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	r := len(numeric)
+	mathrand.Seed(time.Now().UnixNano())
+
+	var sb strings.Builder
+	for i := 0; i < width; i++ {
+		fmt.Fprintf(&sb, "%d", numeric[mathrand.Intn(r)])
+	}
+	return sb.String()
 }

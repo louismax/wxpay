@@ -9,12 +9,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -149,52 +145,6 @@ func (c *Client) Sign(params Params) string {
 	return strings.ToUpper(str)
 }
 
-// 签名方法
-func (c *Client) SignV2(params Params,signtype string) string {
-	// 创建切片
-	var keys = make([]string, 0, len(params))
-	// 遍历签名参数
-	for k := range params {
-		if k != "sign" { // 排除sign字段
-			keys = append(keys, k)
-		}
-	}
-	// 由于切片的元素顺序是不固定，所以这里强制给切片元素加个顺序
-	sort.Strings(keys)
-
-	//创建字符缓冲
-	var buf bytes.Buffer
-	for _, k := range keys {
-		if len(params.GetString(k)) > 0 {
-			buf.WriteString(k)
-			buf.WriteString(`=`)
-			buf.WriteString(params.GetString(k))
-			buf.WriteString(`&`)
-		}
-	}
-	// 加入apiKey作加密密钥
-	buf.WriteString(`key=`)
-	buf.WriteString(c.account.apiKey)
-
-	var (
-		dataMd5    [16]byte
-		dataSha256 []byte
-		str        string
-	)
-
-	switch signtype {
-	case MD5:
-		dataMd5 = md5.Sum(buf.Bytes())
-		str = hex.EncodeToString(dataMd5[:]) //需转换成切片
-	case HMACSHA256:
-		h := hmac.New(sha256.New, []byte(c.account.apiKey))
-		h.Write(buf.Bytes())
-		dataSha256 = h.Sum(nil)
-		str = hex.EncodeToString(dataSha256[:])
-	}
-	return strings.ToUpper(str)
-}
-
 // https无证书请求
 func (c *Client) postWithoutCert(url string, params Params) (string, error) {
 	h := &http.Client{}
@@ -256,7 +206,7 @@ func (c *Client) processResponseXml(xmlStr string) (Params, error) {
 	xmlStr = strings.Replace(xmlStr, " ", "", -1)
 	var returnCode string
 	params := XmlToMap(xmlStr)
-	//fmt.Println("返回信息：", params)
+	fmt.Println("返回信息：", params)
 	if params.ContainsKey("return_code") {
 		returnCode = params.GetString("return_code")
 	} else {
@@ -275,29 +225,12 @@ func (c *Client) processResponseXml(xmlStr string) (Params, error) {
 	}
 }
 
-
-// 处理 HTTPS API返回数据，转换成Map对象
-func (c *Client) processResponseXmlNoSign(xmlStr string) (Params, error) {
-	//qlong.DBG("下单返回信息String：%s", xmlStr)
-	xmlStr = strings.Replace(xmlStr, "\n\t", "", -1)
-	xmlStr = strings.Replace(xmlStr, " ", "", -1)
-	params := XmlToMap(xmlStr)
-	return params, nil
-}
-
 // 验证签名
 func (c *Client) ValidSign(params Params) bool {
 	if !params.ContainsKey(Sign) {
 		return true
 	}
 	return params.GetString(Sign) == c.Sign(params)
-}
-// 验证签名
-func (c *Client) ValidSignv2(params Params) bool {
-	if !params.ContainsKey(Sign) {
-		return true
-	}
-	return params.GetString(Sign) == c.SignV2(params,HMACSHA256)
 }
 
 // 统一下单
@@ -518,95 +451,4 @@ func (c *Client)Gethbinfo(params Params) (Params, error)   {
 		return nil, err
 	}
 	return c.processResponseXml(xmlStr)
-}
-
-
-//获取平台证书
-func (c *Client)GetCertficates(params Params) (Params, error)  {
-	var url string
-	if c.account.isSandbox {
-		url = ""
-	} else {
-		url = GetCertficatesUrl
-	}
-	params["nonce_str"] = GetGUID()
-	params["sign_type"] = HMACSHA256
-	params["sign"] = c.SignV2(params,HMACSHA256)
-	h := &http.Client{}
-	fmt.Println("请求参数组装：", params)
-	response, err := h.Post(url, bodyType, strings.NewReader(MapToXml(params)))
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	res, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	//fmt.Println(string(res))
-	return c.processResponseXmlNoSign(string(res))
-}
-
-//图片上传
-func (c *Client)UploadMedia(filePath,mch_id,appKey string) (Params, error)  {
-	if c.account.certData == nil {
-		return nil, errors.New("证书数据为空")
-	}
-	media_hash,err :=CalcFileMD5(filePath)
-	if err != nil{
-		return nil, err
-	}
-	fp, err := os.Open(filePath) // 打开文件句柄
-	if err != nil {
-		return nil, err
-	}
-	defer fp.Close()
-
-	tmpparams := make(Params)
-	tmpparams.SetString("mch_id",mch_id)
-	tmpparams.SetString("media_hash",media_hash)
-	tmpparams.SetString("sign_type",HMACSHA256)
-	tmpparams["sign"] = c.SignV2(tmpparams,HMACSHA256)
-
-
-	body := &bytes.Buffer{} // 初始化body参数
-	writer := multipart.NewWriter(body) // 实例化multipart
-	part, err := writer.CreateFormFile("media", filepath.Base(filePath)) // 创建multipart 文件字段
-	if err != nil {
-		return nil, err
-	}
-	_, err = io.Copy(part, fp) // 写入文件数据到multipart
-	for key, val := range tmpparams {
-		_ = writer.WriteField(key, val) // 写入body中额外参数
-	}
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-
-	// 将pkcs12证书转成pem
-	cert := pkcs12ToPem(c.account.certData, c.account.mchID)
-
-	config := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
-	transport := &http.Transport{
-		TLSClientConfig:    config,
-		DisableCompression: true,
-	}
-	h := &http.Client{Transport: transport}
-
-
-	response, err := h.Post(UploadMediaUrl, "multipart/form-data", body)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	res, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-	return c.processResponseXmlNoSign(string(res))
 }

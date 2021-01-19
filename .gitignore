@@ -16,3 +16,5 @@
 .idea/
 apiclient_cert.p12
 client_testlocal.go
+1.png
+ftu_test_local.go

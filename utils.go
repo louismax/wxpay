@@ -37,6 +37,17 @@ const (
 	SendredpackUrl = "https://api.mch.weixin.qq.com/mmpaymkttransfers/sendredpack"
 	GethbinfoUrl = "https://api.mch.weixin.qq.com/mmpaymkttransfers/gethbinfo"
 
+	//分账
+	ProfitSharingMerchantRatioQueryUrl = "https://api.mch.weixin.qq.com/pay/profitsharingmerchantratioquery" //查询分账比例
+	ProfitSharingAddReceiverUrl = "https://api.mch.weixin.qq.com/pay/profitsharingaddreceiver"//添加分账接收方
+	ProfitSharingRemoveReceiverUrl = "https://api.mch.weixin.qq.com/pay/profitsharingremovereceiver" //删除分账接收方
+	ProfitSharingOrderAmountQueryUrl = "https://api.mch.weixin.qq.com/pay/profitsharingorderamountquery"//查询订单待分账金额
+	ProfitSharingUrl = "https://api.mch.weixin.qq.com/secapi/pay/profitsharing" //请求单次分账
+	MultiProfitSharingUrl = "https://api.mch.weixin.qq.com/secapi/pay/multiprofitsharing" //请求多次分账
+	ProfitSharingQueryUrl = "https://api.mch.weixin.qq.com/pay/profitsharingquery"//查询分账结果
+	ProfitSharingFinishUrl = "https://api.mch.weixin.qq.com/secapi/pay/profitsharingfinish"//完结分账
+
+
 	//微信支付沙箱测试接口
 	SandboxUnifiedOrderUrl     = "https://api.mch.weixin.qq.com/sandboxnew/pay/unifiedorder"
 	SandboxOrderQueryUrl       = "https://api.mch.weixin.qq.com/sandboxnew/pay/orderquery"

@@ -300,7 +300,7 @@ func (c *Client) ProfitSharingFinish(transaction_id, out_order_no, description s
 	if c.account.isSandbox {
 		url = ""
 	} else {
-		url = MultiProfitSharingUrl
+		url = ProfitSharingFinishUrl
 	}
 	c.signType = HMACSHA256
 	params := Params{}
